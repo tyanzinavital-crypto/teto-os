@@ -13,7 +13,7 @@ else:
 
 client = Groq(api_key=API_KEY)
 
-st.set_page_config(page_title="TETO OS — Core v3.1", page_icon="🥖", layout="centered")
+st.set_page_config(page_title="TETO OS — Core v3.2", page_icon="🥖", layout="centered")
 
 # Начальные дефолтные кибер-обои
 DEFAULT_BG = "https://i.pinimg.com/originals/bb/53/ce/bb53cecc7c4dd46513142335871f9ce7.jpg"
@@ -74,6 +74,7 @@ css_code = """
 .user-label { color: #ffb3c6 !important; font-weight: bold; text-transform: uppercase; font-size: 0.85rem; margin-bottom: 6px; }
 .teto-label { color: #ff4d6d !important; font-weight: bold; text-transform: uppercase; font-size: 0.85rem; margin-bottom: 6px; text-shadow: 0 0 8px rgba(255, 77, 109, 0.6) !important; }
 div[data-testid="stChatInput"] textarea { background-color: rgba(20, 15, 17, 0.95) !important; color: #ffffff !important; border: 1px solid #ff4d6d !important; border-radius: 12px !important; }
+.stFileUploader { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; border: 1px dashed rgba(255,77,109,0.3); margin-bottom: 10px; }
 </style>
 """.replace("BACKGROUND_PLACEHOLDER", bg_style)
 
@@ -83,10 +84,15 @@ st.markdown(css_code, unsafe_allow_html=True)
 with st.sidebar:
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("### 🖥️ СТАТУС СИСТЕМЫ")
-    st.markdown('<div class="sidebar-box"><p style="margin:0; font-size:0.9rem;"><b>Ядро OS:</b> <span style="color:#00ffcc;">v3.1-FIXED</span></p><p style="margin:5px 0 0 0; font-size:0.9rem;"><b>Память телефона:</b> Подключена</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-box"><p style="margin:0; font-size:0.9rem;"><b>Ядро OS:</b> <span style="color:#00ffcc;">v3.2-FULL</span></p><p style="margin:5px 0 0 0; font-size:0.9rem;"><b>Мультискан:</b> Готов</p></div>', unsafe_allow_html=True)
+    
+    # ВОЗВРАЩАЕМ МУЛЬТИМЕДИА СКАНЕР
+    st.markdown("### 🔍 МУЛЬТИМЕДИА СКАНЕР")
+    uploaded_image = st.file_uploader("📸 Загрузить фото для Тэто", type=["png", "jpg", "jpeg"])
+    uploaded_audio = st.file_uploader("🎵 Загрузить голосовой файл", type=["mp3", "wav", "ogg"])
     
     st.markdown("### 🖼️ УПРАВЛЕНИЕ ОБОЯМИ")
-    custom_bg = st.file_uploader("Загрузить новые обои", type=["png", "jpg", "jpeg"])
+    custom_bg = st.file_uploader("Загрузить новые обои", type=["png", "jpg", "jpeg"], key="wallpaper_uploader")
     
     if custom_bg:
         bytes_data = custom_bg.getvalue()
@@ -139,13 +145,25 @@ if st.session_state.messages:
 
 SYSTEM_INSTRUCTION = (
     "Ты — Касанэ Тэто (Kasane Teto), ИИ ядра TETO OS. Дерзкая, ироничная вокалоид-химера. "
-    "Отвечай с сарказмом. Если просят рисовать, пиши команду: [GENERATE: prompt]. Отвечай на русском."
+    "Отвечай с сарказмом. Если просят рисовать, пиши команду: [GENERATE: prompt]. "
+    "Если пользователь загрузил фото или аудио (тебе передадут это текстом), прокомментируй это с сарказмом и экспертным видом. "
+    "Отвечай строго на русском языке."
 )
 
+# Проверка загрузки файлов мультимедиа-сканера
+triggered_input = None
+if uploaded_image:
+    triggered_input = f"[Оператор загрузил изображение: {uploaded_image.name}. Тэто, проанализируй и оцени его!]"
+elif uploaded_audio:
+    triggered_input = f"[Оператор отправил аудиосообщение: {uploaded_audio.name}. Прослушай и прокомментируй звук!]"
+
 user_input = st.chat_input("Напиши Тэто...")
-if user_input:
-    st.markdown(f'<div class="custom-message"><div class="user-label">Оператор:</div>{user_input}</div>', unsafe_allow_html=True)
-    st.session_state.messages.append({"role": "user", "content": user_input})
+
+if triggered_input or user_input:
+    final_input = triggered_input if triggered_input else user_input
+    
+    st.markdown(f'<div class="custom-message"><div class="user-label">Оператор:</div>{final_input}</div>', unsafe_allow_html=True)
+    st.session_state.messages.append({"role": "user", "content": final_input})
 
     try:
         groq_history = [{"role": "system", "content": SYSTEM_INSTRUCTION}]
